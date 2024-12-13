@@ -30,8 +30,9 @@ def parse_candidate(candidate_str):
         rport = int(match.group(10)) if match.group(10) else None
 
         # Trả về đối tượng RTCIceCandidate đúng cách
+        # Cần bỏ qua các tham số không cần thiết cho constructor của RTCIceCandidate
         return RTCIceCandidate(
-            candidate= candidate,
+            candidate=candidate,
             sdpMLineIndex=component,
             sdpMid=protocol
         )

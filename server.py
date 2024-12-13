@@ -15,8 +15,26 @@ pcs = {}  # Danh sách các kết nối peer, lưu theo ID của mỗi client
 # Phân tích candidate từ chuỗi (sử dụng RTCIceCandidate sẽ giúp đơn giản hóa)
 def parse_candidate(candidate_str):
     try:
-        candidate = RTCIceCandidate(candidate_str)
-        return candidate
+        # Tách thông tin từ candidate (sử dụng cú pháp của WebRTC)
+        components = candidate_str.split()
+        if len(components) >= 8:
+            foundation = components[1]
+            component_id = components[2]
+            transport = components[3]
+            ip = components[4]
+            port = int(components[5])
+            candidate_type = components[7]
+            return RTCIceCandidate(
+                foundation=foundation,
+                component=component_id,
+                transport=transport,
+                ip=ip,
+                port=port,
+                candidate_type=candidate_type
+            )
+        else:
+            print(f"Invalid candidate format: {candidate_str}")
+            return None
     except Exception as e:
         print(f"Error parsing candidate: {e}")
         return None
@@ -92,13 +110,10 @@ async def handle_candidate(sid, data):
             candidate = parse_candidate(candidate_str)
 
             if candidate:
-                # Tạo đối tượng RTCIceCandidate đúng cách
-                ice_candidate = RTCIceCandidate(candidate=candidate_str)
-
                 # Tìm kiếm peer connection theo SID và thêm candidate vào peer connection
                 pc = pcs.get(sid)
                 if pc:
-                    await pc.addIceCandidate(ice_candidate)
+                    await pc.addIceCandidate(candidate)
                     print(f"ICE Candidate added to peer connection for SID: {sid}")
                 else:
                     print(f"No peer connection found for SID: {sid}")

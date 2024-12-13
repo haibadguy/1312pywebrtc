@@ -13,13 +13,14 @@ sio.attach(app)
 
 pcs = {}  # Danh sách các kết nối peer, lưu theo ID của mỗi client
 
+# Hàm phân tích candidate từ chuỗi
 def parse_candidate(candidate_str):
-    pattern = r"candidate:(\d+) (\d) (\w+) (\d+) (\d+\.\d+\.\d+\.\d+) (\d+) typ (\w+) generation (\d+) ufrag (\S+) network-id (\d+)"
+    pattern = r"candidate:(\S+) (\d+) (\w+) (\d+) (\d+\.\d+\.\d+\.\d+) (\d+) typ (\w+) generation (\d+) ufrag (\S+) network-id (\d+)"
     match = re.match(pattern, candidate_str)
     
     if match:
-        foundation = match.group(1)
-        component_id = match.group(2)
+        candidate = match.group(1)
+        component = int(match.group(2))
         protocol = match.group(3)
         priority = int(match.group(4))
         ip = match.group(5)
@@ -28,8 +29,8 @@ def parse_candidate(candidate_str):
         generation = int(match.group(8))
         ufrag = match.group(9)
         
-        # Create the RTCIceCandidate object (adjust this as needed for your library)
-        return RTCIceCandidate(foundation, component_id, protocol, priority, ip, port, type_, generation, ufrag)
+        # Trả về RTCIceCandidate với các tham số phù hợp
+        return RTCIceCandidate(candidate, component, protocol, priority, ip, port, type_, generation, ufrag)
     else:
         print("Failed to parse candidate.")
         return None

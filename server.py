@@ -5,57 +5,21 @@ from aiortc import RTCPeerConnection, RTCSessionDescription, RTCIceCandidate
 import socketio
 import os
 
-# Phân tích candidate từ chuỗi
-def parse_candidate(candidate_str):
-    try:
-        candidate_parts = candidate_str.split()
-        if len(candidate_parts) < 8:
-            print("Invalid candidate format: not enough parts")
-            return None  # Invalid candidate format
-        
-        # Thử parse các phần tử cần thiết và kiểm tra các lỗi có thể xảy ra
-        foundation = candidate_parts[0]
-        component = candidate_parts[1]
-        transport = candidate_parts[2]
-        try:
-            priority = int(candidate_parts[3])  # Priority phải là số nguyên
-        except ValueError:
-            print(f"Invalid priority value: {candidate_parts[3]}")
-            return None
-        
-        ip = candidate_parts[4]  # Địa chỉ IP
-        try:
-            port = int(candidate_parts[5])  # Cổng
-        except ValueError:
-            print(f"Invalid port value: {candidate_parts[5]}")
-            return None
-        
-        protocol = candidate_parts[6]
-        type_ = candidate_parts[7]
-
-        # Trả về candidate dưới dạng một dictionary
-        return {
-            "foundation": foundation,
-            "component": component,
-            "transport": transport,
-            "priority": priority,
-            "ip": ip,
-            "port": port,
-            "protocol": protocol,
-            "type": type_
-        }
-    
-    except ValueError as e:
-        print(f"Error parsing candidate: {e}")
-        return None
-
-
 # Tạo server Socket.IO
 sio = socketio.AsyncServer(async_mode='aiohttp')
 app = web.Application()
 sio.attach(app)
 
 pcs = {}  # Danh sách các kết nối peer, lưu theo ID của mỗi client
+
+# Phân tích candidate từ chuỗi (sử dụng RTCIceCandidate sẽ giúp đơn giản hóa)
+def parse_candidate(candidate_str):
+    try:
+        candidate = RTCIceCandidate(candidate_str)
+        return candidate
+    except Exception as e:
+        print(f"Error parsing candidate: {e}")
+        return None
 
 # Sự kiện kết nối của client
 @sio.event
@@ -74,10 +38,18 @@ async def disconnect(sid):
 # Xử lý offer từ client
 @sio.on("offer")
 async def handle_offer(sid, data):
-    print("Offer received from", sid)  # Debug log khi nhận được offer
+    print("Offer received from", sid)
     params = json.loads(data)
     pc = RTCPeerConnection()
     pcs[sid] = pc
+
+    # Thêm ICE servers cho Peer Connection
+    pc = RTCPeerConnection({
+        "iceServers": [
+            {"urls": "stun:stun1.l.google.com:19302"},
+            {"urls": "stun:stun2.l.google.com:19302"}
+        ]
+    })
 
     # Xử lý ICE candidates
     @pc.on("iceconnectionstatechange")
@@ -91,7 +63,6 @@ async def handle_offer(sid, data):
     def on_track(track):
         print(f"Track received: {track.kind}")
         if track.kind == "video":
-            # Hiển thị video remote lên client
             pc.addTrack(track)  # Đơn giản chỉ thêm track vào PC để client nhận được
 
     # Thiết lập Remote Description
@@ -102,7 +73,7 @@ async def handle_offer(sid, data):
     # Trả lời bằng answer
     answer = await pc.createAnswer()
     await pc.setLocalDescription(answer)
-    print("Sending answer to client")  # Debug log khi gửi answer
+    print("Sending answer to client")
     await sio.emit("answer", json.dumps({
         "sdp": pc.localDescription.sdp,
         "type": pc.localDescription.type
@@ -111,22 +82,18 @@ async def handle_offer(sid, data):
 # Xử lý candidate nhận được
 @sio.on("candidate")
 async def handle_candidate(sid, data):
-    print("Candidate received:", data)  # Debug log when receiving candidate
+    print("Candidate received:", data)
     
     try:
         params = json.loads(data)
         candidate_str = params.get("candidate")
         
         if candidate_str:
-            candidate = parse_candidate(candidate_str)  # Parse candidate
+            candidate = parse_candidate(candidate_str)
 
             if candidate:
                 # Tạo đối tượng RTCIceCandidate đúng cách
-                ice_candidate = RTCIceCandidate(
-                    sdpMid=params.get("sdpMid"),
-                    sdpMLineIndex=params.get("sdpMLineIndex"),
-                    candidate=candidate_str  # Truyền candidate trực tiếp vào đây
-                )
+                ice_candidate = RTCIceCandidate(candidate=candidate_str)
 
                 # Tìm kiếm peer connection theo SID và thêm candidate vào peer connection
                 pc = pcs.get(sid)
@@ -143,7 +110,6 @@ async def handle_candidate(sid, data):
     except json.JSONDecodeError:
         print("Invalid JSON format")
 
-
 # Route để phục vụ trang index
 async def index(request):
     with open("index.html", encoding="utf-8") as f:
@@ -154,10 +120,9 @@ app.router.add_get("/", index)
 
 # Thiết lập Render environment
 if os.getenv('RENDER_EXTERNAL_URL'):
-    public_url = os.getenv('RENDER_EXTERNAL_URL')  # Lấy URL công cộng từ Render
+    public_url = os.getenv('RENDER_EXTERNAL_URL')
     print(f"Public URL: {public_url}")
 
 # Chạy server trên Render (cổng 8080 mặc định)
 if __name__ == "__main__":
-    # Chạy server
     web.run_app(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

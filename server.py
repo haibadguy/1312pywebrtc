@@ -139,6 +139,7 @@ if os.getenv('RENDER_EXTERNAL_URL'):
     public_url = os.getenv('RENDER_EXTERNAL_URL')
     print(f"Public URL: {public_url}")
 
-# Chạy server trên Render (cổng 8080 mặc định)
+# Chạy server trên Render (cổng 10000 mặc định)
 if __name__ == "__main__":
-    web.run_app(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    port = int(os.environ.get("PORT", 10000))  # Sử dụng cổng từ môi trường, mặc định là 10000
+    web.run_app(app, host="0.0.0.0", port=port)

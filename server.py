@@ -13,8 +13,11 @@ sio.attach(app)
 
 pcs = {}  # Danh sách các kết nối peer, lưu theo ID của mỗi client
 
+from aiortc import RTCIceCandidate
+import re
+
 def parse_candidate(candidate_str):
-    # Mẫu regex để phân tích candidate, hỗ trợ nhiều loại candidate khác nhau
+    # Mẫu regex để phân tích candidate
     pattern = r"candidate:(\S+) (\d+) (\w+) (\d+) (\d+\.\d+\.\d+\.\d+) (\d+) typ (\w+)( raddr (\d+\.\d+\.\d+\.\d+) rport (\d+))? generation (\d+) ufrag (\S+) network-id (\d+)( network-cost (\d+))?"
     match = re.match(pattern, candidate_str)
 
@@ -29,12 +32,11 @@ def parse_candidate(candidate_str):
         raddr = match.group(9)  # Địa chỉ nếu có
         rport = int(match.group(10)) if match.group(10) else None
 
-        # Trả về đối tượng RTCIceCandidate đúng cách
-        # Cần bỏ qua các tham số không cần thiết cho constructor của RTCIceCandidate
+        # Sử dụng đúng tham số để khởi tạo RTCIceCandidate
         return RTCIceCandidate(
-            candidate=candidate,
-            sdpMLineIndex=component,
-            sdpMid=protocol
+            candidate=candidate, 
+            sdpMid=None,  # Bạn có thể thay đổi các tham số tùy thuộc vào yêu cầu của bạn
+            sdpMLineIndex=component
         )
     else:
         print("Failed to parse candidate.")

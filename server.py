@@ -16,12 +16,14 @@ pcs = {}  # Danh sách các kết nối peer, lưu theo ID của mỗi client
 from aiortc import RTCIceCandidate
 import re
 
+from aiortc import RTCIceCandidate
+
 def parse_candidate(candidate_str):
-    # Mẫu regex để phân tích candidate
     pattern = r"candidate:(\S+) (\d+) (\w+) (\d+) (\d+\.\d+\.\d+\.\d+) (\d+) typ (\w+)( raddr (\d+\.\d+\.\d+\.\d+) rport (\d+))? generation (\d+) ufrag (\S+) network-id (\d+)( network-cost (\d+))?"
     match = re.match(pattern, candidate_str)
 
     if match:
+        # Lấy các thông tin cần thiết từ chuỗi candidate
         candidate = match.group(1)
         component = int(match.group(2))
         protocol = match.group(3)
@@ -29,13 +31,10 @@ def parse_candidate(candidate_str):
         ip = match.group(5)
         port = int(match.group(6))
         type_ = match.group(8)
-        raddr = match.group(9)  # Địa chỉ nếu có
-        rport = int(match.group(10)) if match.group(10) else None
 
-        # Sử dụng đúng tham số để khởi tạo RTCIceCandidate
         return RTCIceCandidate(
             candidate=candidate, 
-            sdpMid=None,  # Bạn có thể thay đổi các tham số tùy thuộc vào yêu cầu của bạn
+            sdpMid=None, 
             sdpMLineIndex=component
         )
     else:

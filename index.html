@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Simple WebRTC</title>
+</head>
+
+<body>
+    <h1>Simple WebRTC</h1>
+    <video id="localVideo" autoplay muted poster="placeholder.jpg"></video>
+    <video id="remoteVideo" autoplay poster="placeholder.jpg"></video>
+    <button id="startCall">Start Call</button>
+    <button id="reset">Reset</button>
+    <p style="color: grey;">By starting the call, you grant access to your camera and microphone.</p>
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <script>
+        const localVideo = document.getElementById("localVideo");
+        const remoteVideo = document.getElementById("remoteVideo");
+        const startCallButton = document.getElementById("startCall");
+        const resetButton = document.getElementById("reset");
+
+        const socket = io();
+        let localStream;
+        let pc;
+
+        function showError(message) {
+            const errorContainer = document.createElement("div");
+            errorContainer.style.color = "red";
+            errorContainer.textContent = message;
+            document.body.appendChild(errorContainer);
+        }
+
+        async function startCall() {
+            pc = new RTCPeerConnection({
+                iceServers: [{
+                    urls: ["stun:stun.l.google.com:19302"]
+                }]
+            });
+
+            pc.ontrack = (event) => {
+                if (event.track.kind === "video") {
+                    remoteVideo.srcObject = event.streams[0];
+                }
+            };
+
+            pc.onicecandidate = (event) => {
+                if (event.candidate) {
+                    console.log("Sending ICE candidate to server:", event.candidate);
+                    socket.emit("candidate", JSON.stringify(event.candidate));
+                }
+            };
+
+            pc.oniceconnectionstatechange = () => {
+                console.log("ICE connection state:", pc.iceConnectionState);
+            };
+
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: true,
+                    audio: true
+                });
+                localVideo.srcObject = localStream;
+
+                localStream.getTracks().forEach((track) => pc.addTrack(track, localStream));
+
+                const offer = await pc.createOffer();
+                await pc.setLocalDescription(offer);
+                socket.emit("offer", JSON.stringify(pc.localDescription));
+            } catch (error) {
+                console.error("Error accessing media devices.", error);
+                showError("Error accessing your camera or microphone. Please check permissions.");
+            }
+        }
+
+        socket.on("answer", async (data) => {
+            console.log("Answer received:", data);
+            const answer = typeof data === "string" ? JSON.parse(data) : data;
+            try {
+                await pc.setRemoteDescription(answer);
+            } catch (error) {
+                console.error("Error setting remote description:", error);
+                showError("Failed to set remote description.");
+            }
+        });
+
+        socket.on("candidate", async (data) => {
+            console.log("ICE Candidate received:", data);
+            const candidate = JSON.parse(data);
+            try {
+                await pc.addIceCandidate(candidate);
+            } catch (error) {
+                console.error("Error adding ICE candidate:", error);
+                showError("Failed to add ICE candidate.");
+            }
+        });
+
+        socket.on("connect", () => {
+            console.log("Connected to signaling server.");
+        });
+
+        socket.on("connect_error", () => {
+            showError("Failed to connect to signaling server. Please try again.");
+        });
+
+        socket.on("disconnect", () => {
+            showError("Disconnected from signaling server. Check your connection.");
+        });
+
+        startCallButton.onclick = async () => {
+            startCallButton.disabled = true;
+            await startCall();
+        };
+
+        resetButton.onclick = () => window.location.reload();
+    </script>
+</body>
+
+</html>

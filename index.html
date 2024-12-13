@@ -11,7 +11,7 @@
     <video id="remoteVideo" autoplay></video>
     <button id="startCall">Start Call</button>
     <button id="reset">Reset</button>
-    
+
     <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
     <script>
         const localVideo = document.getElementById("localVideo");
@@ -32,8 +32,9 @@
 
         async function startCall() {
             pc = new RTCPeerConnection({
-                iceServers: [
-                    { urls: ["stun:hk-turn1.xirsys.com"] },
+                iceServers: [{
+                        urls: ["stun:hk-turn1.xirsys.com"]
+                    },
                     {
                         username: "xeozEP2aLOuhPx5edxRIpr2x5XgOvNMZUbGkpb-lXCylaO_PSpZzMG9b90WdCOP5AAAAAGdcbBlob25naGFp",
                         credential: "17f13956-b976-11ef-ab27-0242ac120004",

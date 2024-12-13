@@ -18,10 +18,11 @@ def parse_candidate(candidate_str):
     match = re.match(pattern, candidate_str)
     if match:
         candidate = match.group(0)  # Lấy toàn bộ chuỗi candidate
-        component = int(match.group(2))
+        sdpMid = "0"  # Bạn có thể thay đổi giá trị này nếu cần
+        sdpMLineIndex = int(match.group(2))
         return RTCIceCandidate(
-            sdpMid=None,
-            sdpMLineIndex=component,
+            sdpMid=sdpMid,
+            sdpMLineIndex=sdpMLineIndex,
             candidate=candidate
         )
     else:

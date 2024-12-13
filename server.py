@@ -17,17 +17,12 @@ def parse_candidate(candidate_str):
     pattern = r"candidate:(\S+) (\d+) (\w+) (\d+) (\d+\.\d+\.\d+\.\d+) (\d+) typ (\w+)( raddr (\d+\.\d+\.\d+\.\d+) rport (\d+))? generation (\d+) ufrag (\S+) network-id (\d+)( network-cost (\d+))?"
     match = re.match(pattern, candidate_str)
     if match:
-        candidate = match.group(1)
+        candidate = match.group(0)  # Lấy toàn bộ chuỗi candidate
         component = int(match.group(2))
-        protocol = match.group(3)
-        priority = int(match.group(4))
-        ip = match.group(5)
-        port = int(match.group(6))
-        type_ = match.group(8)
         return RTCIceCandidate(
             sdpMid=None,
             sdpMLineIndex=component,
-            candidate=candidate_str
+            candidate=candidate
         )
     else:
         print("Failed to parse candidate.")

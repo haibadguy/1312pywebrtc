@@ -10,15 +10,26 @@ def parse_candidate(candidate_str):
     try:
         candidate_parts = candidate_str.split()
         if len(candidate_parts) < 8:
-            print("Invalid candidate format")
+            print("Invalid candidate format: not enough parts")
             return None  # Invalid candidate format
         
+        # Thử parse các phần tử cần thiết và kiểm tra các lỗi có thể xảy ra
         foundation = candidate_parts[0]
         component = candidate_parts[1]
         transport = candidate_parts[2]
-        priority = int(candidate_parts[3])  # Priority phải là số nguyên
+        try:
+            priority = int(candidate_parts[3])  # Priority phải là số nguyên
+        except ValueError:
+            print(f"Invalid priority value: {candidate_parts[3]}")
+            return None
+        
         ip = candidate_parts[4]  # Địa chỉ IP
-        port = int(candidate_parts[5])  # Cổng
+        try:
+            port = int(candidate_parts[5])  # Cổng
+        except ValueError:
+            print(f"Invalid port value: {candidate_parts[5]}")
+            return None
+        
         protocol = candidate_parts[6]
         type_ = candidate_parts[7]
 
@@ -37,6 +48,7 @@ def parse_candidate(candidate_str):
     except ValueError as e:
         print(f"Error parsing candidate: {e}")
         return None
+
 
 # Tạo server Socket.IO
 sio = socketio.AsyncServer(async_mode='aiohttp')
@@ -96,6 +108,7 @@ async def handle_offer(sid, data):
         "type": pc.localDescription.type
     }), room=sid)
 
+# Xử lý candidate nhận được
 @sio.on("candidate")
 async def handle_candidate(sid, data):
     print("Candidate received:", data)  # Debug log when receiving candidate
@@ -108,14 +121,14 @@ async def handle_candidate(sid, data):
             candidate = parse_candidate(candidate_str)  # Parse candidate
 
             if candidate:
-                # Create RTCIceCandidate object with parsed components
+                # Tạo đối tượng RTCIceCandidate đúng cách
                 ice_candidate = RTCIceCandidate(
                     sdpMid=params.get("sdpMid"),
                     sdpMLineIndex=params.get("sdpMLineIndex"),
-                    candidate=candidate_str  # Pass the candidate string directly
+                    candidate=candidate_str  # Truyền candidate trực tiếp vào đây
                 )
 
-                # Find peer connection by SID and add candidate to peer connection
+                # Tìm kiếm peer connection theo SID và thêm candidate vào peer connection
                 pc = pcs.get(sid)
                 if pc:
                     await pc.addIceCandidate(ice_candidate)
@@ -129,6 +142,7 @@ async def handle_candidate(sid, data):
     
     except json.JSONDecodeError:
         print("Invalid JSON format")
+
 
 # Route để phục vụ trang index
 async def index(request):

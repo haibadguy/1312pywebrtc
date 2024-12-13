@@ -13,23 +13,28 @@ sio.attach(app)
 
 pcs = {}  # Danh sách các kết nối peer, lưu theo ID của mỗi client
 
-# Hàm phân tích candidate từ chuỗi
 def parse_candidate(candidate_str):
-    pattern = r"candidate:(\S+) (\d+) (\w+) (\d+) (\d+\.\d+\.\d+\.\d+) (\d+) typ (\w+) generation (\d+) ufrag (\S+) network-id (\d+)"
+    # Mẫu regex để phân tích candidate, hỗ trợ nhiều loại candidate khác nhau
+    pattern = r"candidate:(\S+) (\d+) (\w+) (\d+) (\d+\.\d+\.\d+\.\d+) (\d+) typ (\w+)( raddr (\d+\.\d+\.\d+\.\d+) rport (\d+))? generation (\d+) ufrag (\S+) network-id (\d+)( network-cost (\d+))?"
     match = re.match(pattern, candidate_str)
     
     if match:
+        # Trích xuất các nhóm dữ liệu từ chuỗi match
         candidate = match.group(1)
         component = int(match.group(2))
         protocol = match.group(3)
         priority = int(match.group(4))
         ip = match.group(5)
         port = int(match.group(6))
-        type_ = match.group(7)
-        generation = int(match.group(8))
-        ufrag = match.group(9)
+        type_ = match.group(8)
+        generation = int(match.group(13))
+        ufrag = match.group(14)
+        network_id = int(match.group(15))
+        network_cost = int(match.group(17)) if match.group(17) else None
+        raddr = match.group(9)  # Địa chỉ nếu có
+        rport = int(match.group(10)) if match.group(10) else None
         
-        # Trả về RTCIceCandidate với các tham số phù hợp
+        # Trả về đối tượng RTCIceCandidate
         return RTCIceCandidate(candidate, component, protocol, priority, ip, port, type_, generation, ufrag)
     else:
         print("Failed to parse candidate.")

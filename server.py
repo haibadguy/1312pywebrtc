@@ -27,7 +27,7 @@ def parse_candidate(candidate_str):
         return RTCIceCandidate(
             sdpMid=None,
             sdpMLineIndex=component,
-            candidate=candidate
+            candidate=candidate_str
         )
     else:
         print("Failed to parse candidate.")

@@ -19,7 +19,7 @@
         const startCallButton = document.getElementById("startCall");
         const resetButton = document.getElementById("reset");
 
-        const socket = io();
+        const socket = io("https://one312pywebrtc.onrender.com");
         let localStream;
         let pc;
 

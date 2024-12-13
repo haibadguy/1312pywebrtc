@@ -1,3 +1,4 @@
+import re
 import asyncio
 import json
 from aiohttp import web
@@ -12,13 +13,25 @@ sio.attach(app)
 
 pcs = {}  # Danh sách các kết nối peer, lưu theo ID của mỗi client
 
-# Sửa lại hàm parse_candidate để sử dụng trực tiếp candidate string
 def parse_candidate(candidate_str):
-    try:
-        # Chỉ cần trả về candidate trực tiếp, không cần phải phân tích chi tiết
-        return RTCIceCandidate(candidate_str)
-    except Exception as e:
-        print(f"Error parsing candidate: {e}")
+    pattern = r"candidate:(\d+) (\d) (\w+) (\d+) (\d+\.\d+\.\d+\.\d+) (\d+) typ (\w+) generation (\d+) ufrag (\S+) network-id (\d+)"
+    match = re.match(pattern, candidate_str)
+    
+    if match:
+        foundation = match.group(1)
+        component_id = match.group(2)
+        protocol = match.group(3)
+        priority = int(match.group(4))
+        ip = match.group(5)
+        port = int(match.group(6))
+        type_ = match.group(7)
+        generation = int(match.group(8))
+        ufrag = match.group(9)
+        
+        # Create the RTCIceCandidate object (adjust this as needed for your library)
+        return RTCIceCandidate(foundation, component_id, protocol, priority, ip, port, type_, generation, ufrag)
+    else:
+        print("Failed to parse candidate.")
         return None
 
 # Sự kiện kết nối của client

@@ -13,11 +13,6 @@ sio.attach(app)
 
 pcs = {}  # Danh sách các kết nối peer, lưu theo ID của mỗi client
 
-from aiortc import RTCIceCandidate
-import re
-
-from aiortc import RTCIceCandidate
-
 def parse_candidate(candidate_str):
     pattern = r"candidate:(\S+) (\d+) (\w+) (\d+) (\d+\.\d+\.\d+\.\d+) (\d+) typ (\w+)( raddr (\d+\.\d+\.\d+\.\d+) rport (\d+))? generation (\d+) ufrag (\S+) network-id (\d+)( network-cost (\d+))?"
     match = re.match(pattern, candidate_str)
@@ -135,4 +130,4 @@ if os.getenv('RENDER_EXTERNAL_URL'):
 # Chạy server trên Render (cổng 10000 mặc định)
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 10000))  # Sử dụng cổng từ môi trường, mặc định là 10000
-    web.run_app(app, host="0.0.0.0", port=port)
+    web.run_app(app, port=port)

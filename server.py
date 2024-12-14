@@ -30,7 +30,9 @@ async def disconnect(sid):
 async def handle_offer(sid, data):
     print("Offer received from", sid)
     params = json.loads(data)
-    pc = RTCPeerConnection()
+    pc = RTCPeerConnection(configuration={
+        "iceServers": [{"urls": "stun:stun.l.google.com:19302"}]
+    })
     pcs[sid] = pc
 
     @pc.on("iceconnectionstatechange")
@@ -45,16 +47,19 @@ async def handle_offer(sid, data):
         print(f"Track received: {track.kind}")
         pc.addTrack(track)
 
-    await pc.setRemoteDescription(
-        RTCSessionDescription(sdp=params["sdp"], type=params["type"])
-    )
-    answer = await pc.createAnswer()
-    await pc.setLocalDescription(answer)
-    print("Sending answer to client")
-    await sio.emit("answer", json.dumps({
-        "sdp": pc.localDescription.sdp,
-        "type": pc.localDescription.type
-    }), room=sid)
+    try:
+        await pc.setRemoteDescription(
+            RTCSessionDescription(sdp=params["sdp"], type=params["type"])
+        )
+        answer = await pc.createAnswer()
+        await pc.setLocalDescription(answer)
+        print("Sending answer to client")
+        await sio.emit("answer", json.dumps({
+            "sdp": pc.localDescription.sdp,
+            "type": pc.localDescription.type
+        }), room=sid)
+    except Exception as e:
+        print(f"Error handling offer: {e}")
 
 async def index(request):
     with open("index.html", encoding="utf-8") as f:

@@ -1,72 +1,78 @@
-import asyncio
+from flask import Flask, request, send_from_directory
+from flask_socketio import SocketIO
+from flask_cors import CORS
 import json
-from aiohttp import web
 from aiortc import RTCPeerConnection, RTCSessionDescription
-import socketio
-import os
 
-# Create Socket.IO server
-sio = socketio.AsyncServer(async_mode='aiohttp')
-app = web.Application()
-sio.attach(app)
+app = Flask(__name__)
+CORS(app)  # Bật CORS
+socketio = SocketIO(app, cors_allowed_origins="*")
 
-pcs = {}  # Dictionary to store peer connections by client ID
+pcs = {}
 
-# Client connection event
-@sio.event
-async def connect(sid, environ):
-    print(f"Client connected: {sid}")
+@app.route("/")
+def index():
+    return send_from_directory('.', 'index.html')
 
-# Client disconnection event
-@sio.event
-async def disconnect(sid):
+@socketio.on("connect")
+def on_connect():
+    print("Client connected")
+
+@socketio.on("disconnect")
+def on_disconnect():
+    sid = request.sid
     print(f"Client disconnected: {sid}")
     if sid in pcs:
-        await pcs[sid].close()
-        del pcs[sid]
+        pc = pcs.pop(sid)
+        pc.close()
 
-# Handle SDP offer from client
-@sio.on("offer")
-async def handle_offer(sid, data):
+@socketio.on("offer")
+def handle_offer(data):
+    sid = request.sid
     print("Offer received from", sid)
     params = json.loads(data)
+
     pc = RTCPeerConnection(configuration={
         "iceServers": [{"urls": "stun:stun.l.google.com:19302"}]
     })
     pcs[sid] = pc
 
     @pc.on("iceconnectionstatechange")
-    async def on_iceconnectionstatechange():
+    def on_iceconnectionstatechange():
         print(f"ICE state: {pc.iceConnectionState}")
         if pc.iceConnectionState == "failed":
-            await pc.close()
-            del pcs[sid]
+            pc.close()
+            pcs.pop(sid, None)
 
     @pc.on("track")
     def on_track(track):
         print(f"Track received: {track.kind}")
-        pc.addTrack(track)
 
     try:
-        await pc.setRemoteDescription(
+        pc.setRemoteDescription(
             RTCSessionDescription(sdp=params["sdp"], type=params["type"])
         )
-        answer = await pc.createAnswer()
-        await pc.setLocalDescription(answer)
-        print("Sending answer to client")
-        await sio.emit("answer", json.dumps({
+        answer = pc.createAnswer()
+        pc.setLocalDescription(answer)
+        socketio.emit("answer", json.dumps({
             "sdp": pc.localDescription.sdp,
             "type": pc.localDescription.type
         }), room=sid)
     except Exception as e:
         print(f"Error handling offer: {e}")
 
-async def index(request):
-    with open("index.html", encoding="utf-8") as f:
-        return web.Response(content_type="text/html", text=f.read())
-
-app.router.add_get("/", index)
+@socketio.on("candidate")
+def handle_candidate(data):
+    sid = request.sid
+    print(f"ICE Candidate received from {sid}: {data}")
+    try:
+        candidate = json.loads(data)
+        pc = pcs.get(sid)
+        if pc:
+            pc.addIceCandidate(candidate)
+            print(f"Candidate added for {sid}")
+    except Exception as e:
+        print(f"Error handling ICE candidate: {e}")
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))
-    web.run_app(app, port=port)
+    socketio.run(app, port=5000)

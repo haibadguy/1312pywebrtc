@@ -1,3 +1,5 @@
-aiohttp
+Flask
+Flask-SocketIO
+Flask-Cors
 aiortc
 python-socketio

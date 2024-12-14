@@ -75,4 +75,6 @@ def handle_candidate(data):
         print(f"Error handling ICE candidate: {e}")
 
 if __name__ == "__main__":
-    socketio.run(app, port=5000)
+    import eventlet
+    eventlet.monkey_patch()
+    socketio.run(app, host="0.0.0.0", port=5000, server="eventlet")

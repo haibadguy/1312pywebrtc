@@ -76,5 +76,6 @@ def handle_candidate(data):
 
 if __name__ == "__main__":
     import eventlet
-    eventlet.monkey_patch()
-    socketio.run(app, host="0.0.0.0", port=5000, server="eventlet")
+    eventlet.monkey_patch()  # Gọi monkey_patch trước khi import các thư viện khác
+    socketio.run(app, host="0.0.0.0", port=5000)
+
